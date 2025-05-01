@@ -1,0 +1,71 @@
+id,category,question,optionA,optionB,optionC,optionD,correctAnswer,explanation
+A1,funfacts,How many hearts does an octopus have?,1,2,3,4,C,Octopuses have three hearts: two pump blood through the gills and one pumps it through the body.
+A2,funfacts,Which planet has the most moons?,Earth,Jupiter,Saturn,Neptune,C,Saturn has 83 confirmed moons as of 2023 which is more than any other planet in our solar system.
+A3,funfacts,What percentage of the Earth's surface is covered by oceans?,50%,60%,70%,80%,C,About 71% of the Earth's surface is covered by water with oceans making up about 70%.
+A4,funfacts,Which animal sleeps standing up?,Elephants,Horses,Lions,Bears,B,Horses can lock their leg joints which allows them to sleep standing up to quickly escape predators if needed.
+A5,funfacts,How long does it take sunlight to reach Earth?,8 minutes,8 hours,8 days,8 seconds,A,It takes about 8 minutes and 20 seconds for light from the Sun to reach Earth.
+A6,funfacts,What is the smallest bone in the human body?,Stapes,Femur,Humerus,Tibia,A,The stapes (stirrup) bone in the middle ear is the smallest bone measuring only about 3mm.
+A7,funfacts,What color is a giraffe's tongue?,Blue,Black,Purple,Red,C,Giraffes have purple-bluish tongues that can grow up to 20 inches long.
+A8,funfacts,What is the only continent without native snake species?,Asia,Europe,Antarctica,Australia,C,Antarctica is the only continent with no native snake species due to its extreme cold climate.
+A9,funfacts,How many teeth does an adult human have?,28,30,32,36,C,A full set of adult human teeth contains 32 teeth including wisdom teeth.
+A10,funfacts,Which metal is liquid at room temperature?,Iron,Copper,Mercury,Silver,C,Mercury is the only metal that is liquid at standard room temperature and pressure.
+B1,psychology,What is the term for the tendency to recall unfinished tasks better than completed ones?,Zeigarnik effect,Dunning-Kruger effect,Placebo effect,Hawthorne effect,A,The Zeigarnik effect describes how people remember uncompleted tasks better than completed ones due to psychological tension.
+B2,psychology,Which part of the brain is primarily responsible for decision-making?,Cerebellum,Amygdala,Prefrontal cortex,Hippocampus,C,The prefrontal cortex is crucial for complex cognitive behavior including decision making and moderating social behavior.
+B3,psychology,What is the term for the study of body language?,Kinesics,Linguistics,Ergonomics,Proxemics,A,Kinesics is the study and interpretation of nonverbal communication through body movements and gestures.
+B4,psychology,What psychological phenomenon describes our tendency to seek information that confirms our existing beliefs?,Confirmation bias,Availability heuristic,Anchoring bias,Reactance,A,Confirmation bias is the tendency to search for interpret and recall information in a way that confirms one's preexisting beliefs.
+B5,psychology,Which psychologist is known for the hierarchy of needs theory?,Carl Jung,B.F. Skinner,Abraham Maslow,Sigmund Freud,C,Abraham Maslow proposed the hierarchy of needs theory showing how humans fulfill basic needs before pursuing higher ones.
+B6,psychology,What is the fear of confined spaces called?,Agoraphobia,Acrophobia,Claustrophobia,Arachnophobia,C,Claustrophobia is the fear of confined or enclosed spaces which can trigger anxiety and panic attacks.
+B7,psychology,Which memory system holds information for only about 15-30 seconds?,Sensory memory,Short-term memory,Long-term memory,Procedural memory,B,Short-term memory (working memory) can hold a limited amount of information for approximately 15-30 seconds.
+B8,psychology,What is the term for the improvement in performance due to being watched by others?,Social facilitation,Groupthink,Bystander effect,Conformity,A,Social facilitation refers to the tendency for people to perform better on simple tasks when in the presence of others.
+B9,psychology,Which psychological disorder is characterized by extreme mood swings between depression and mania?,Schizophrenia,Bipolar disorder,Major depression,Generalized anxiety,B,Bipolar disorder involves alternating periods of depression and mania or hypomania.
+B10,psychology,What defense mechanism involves attributing unacceptable thoughts to someone else?,Repression,Sublimation,Projection,Denial,C,Projection is a defense mechanism where people attribute their own unacceptable thoughts feelings or traits to others.
+C1,math,What is the square root of 144?,10,11,12,13,C,The square root of 144 is 12 because 12² = 144.
+C2,math,What is the value of π (pi) rounded to two decimal places?,3.12,3.14,3.16,3.18,B,The value of π rounded to two decimal places is 3.14.
+C3,math,What is the sum of angles in a triangle?,90 degrees,180 degrees,270 degrees,360 degrees,B,The sum of interior angles in any triangle is always 180 degrees.
+C4,math,Which of these numbers is a prime number?,15,21,27,31,D,31 is a prime number because its only factors are 1 and itself.
+C5,math,What is the result of 7² - 3²?,40,43,46,49,A,7² - 3² = 49 - 9 = 40.
+C6,math,If a rectangle has a length of 8 cm and a width of 5 cm what is its area?,13 cm²,26 cm²,40 cm²,64 cm²,C,The area of a rectangle is length × width = 8 × 5 = 40 cm².
+C7,math,How many sides does a hexagon have?,4,5,6,8,C,A hexagon is a polygon with six sides.
+C8,math,What is the next number in the sequence: 1 4 9 16 25...?,30,36,40,49,B,The sequence consists of square numbers: 1=1² 4=2² 9=3² 16=4² 25=5² so the next number is 6² = 36.
+C9,math,What is 25% of 80?,15,20,25,30,B,25% of 80 = 0.25 × 80 = 20.
+C10,math,If y = 3x + 7 and x = 2 what is the value of y?,11,13,15,17,B,Substituting x = 2 into y = 3x + 7 gives y = 3(2) + 7 = 6 + 7 = 13.
+D1,science,What is the chemical symbol for gold?,Au,Ag,Fe,Ge,A,The chemical symbol for gold is Au from the Latin word 'aurum'.
+D2,science,What is the hardest natural substance on Earth?,Steel,Diamond,Titanium,Quartz,B,Diamond is the hardest known natural material on Earth rating 10 on the Mohs scale of hardness.
+D3,science,What particle has a positive charge?,Proton,Neutron,Electron,Photon,A,Protons have a positive charge electrons have a negative charge and neutrons have no charge.
+D4,science,Which planet is known as the Red Planet?,Venus,Jupiter,Mars,Saturn,C,Mars is called the Red Planet because of the reddish iron oxide on its surface.
+D5,science,What is the largest organ in the human body?,Heart,Liver,Brain,Skin,D,The skin is the largest organ in the human body covering an area of about 2 square meters for an average adult.
+D6,science,What is the process by which plants make their own food using sunlight?,Photosynthesis,Respiration,Transpiration,Germination,A,Photosynthesis is the process by which plants use sunlight water and carbon dioxide to create oxygen and energy in the form of sugar.
+D7,science,What is the unit of electrical resistance?,Volt,Watt,Ohm,Ampere,C,The ohm (Ω) is the SI unit of electrical resistance.
+D8,science,Which gas makes up the majority of Earth's atmosphere?,Oxygen,Carbon dioxide,Nitrogen,Hydrogen,C,Nitrogen makes up approximately 78% of Earth's atmosphere.
+D9,science,What is the atomic number of carbon?,4,6,8,12,B,Carbon has an atomic number of 6 meaning it has 6 protons in its nucleus.
+D10,science,Which of these is NOT a state of matter?,Solid,Liquid,Gas,Element,D,The three primary states of matter are solid liquid and gas. Element is a type of substance not a state of matter.
+E1,history,Who was the first President of the United States?,Thomas Jefferson,John Adams,George Washington,Benjamin Franklin,C,George Washington served as the first President of the United States from 1789 to 1797.
+E2,history,In which year did World War II end?,1943,1945,1947,1950,B,World War II ended in 1945 with the surrender of Japan following the atomic bombings of Hiroshima and Nagasaki.
+E3,history,Which ancient civilization built the pyramids at Giza?,Babylonians,Romans,Egyptians,Greeks,C,The ancient Egyptians built the pyramids at Giza with the Great Pyramid being constructed around 2560 BCE.
+E4,history,Who wrote the Declaration of Independence?,George Washington,Thomas Jefferson,Benjamin Franklin,John Adams,B,Thomas Jefferson was the principal author of the Declaration of Independence.
+E5,history,Which empire was ruled by Genghis Khan?,Roman Empire,Byzantine Empire,Ottoman Empire,Mongol Empire,D,Genghis Khan founded and ruled the Mongol Empire which became the largest contiguous land empire in history.
+E6,history,In which year did the Berlin Wall fall?,1985,1987,1989,1991,C,The Berlin Wall fell on November 9 1989 marking a pivotal moment in the end of the Cold War.
+E7,history,Who was the first woman to win a Nobel Prize?,Marie Curie,Rosalind Franklin,Florence Nightingale,Jane Goodall,A,Marie Curie was the first woman to win a Nobel Prize in 1903 for Physics and later won another for Chemistry in 1911.
+E8,history,Which battle marked the end of Napoleon's rule?,Battle of Trafalgar,Battle of Waterloo,Battle of Leipzig,Battle of Borodino,B,The Battle of Waterloo in 1815 marked Napoleon's final defeat leading to his permanent exile.
+E9,history,The Renaissance period began in which country?,France,England,Italy,Spain,C,The Renaissance began in Italy in the 14th century before spreading to the rest of Europe.
+E10,history,Which of these was NOT an ancient wonder of the world?,Pyramids of Giza,Colosseum in Rome,Hanging Gardens of Babylon,Lighthouse of Alexandria,B,The Colosseum in Rome was not one of the Seven Wonders of the Ancient World; it was built later during the Roman Empire.
+F1,english,What is the past tense of the verb 'to go'?,Gone,Went,Going,Goed,B,The past tense of 'to go' is 'went' while 'gone' is the past participle.
+F2,english,Which of these words is a synonym for 'happy'?,Sad,Jealous,Joyful,Angry,C,Joyful is a synonym (word with similar meaning) for happy.
+F3,english,What part of speech is the word 'quickly'?,Noun,Verb,Adjective,Adverb,D,Quickly is an adverb - it modifies verbs adjectives or other adverbs.
+F4,english,What is the plural form of 'child'?,Childs,Childes,Children,Childrens,C,The plural of 'child' is the irregular form 'children'.
+F5,english,Which punctuation mark ends an interrogative sentence?,Period,Comma,Exclamation point,Question mark,D,A question mark (?) is used at the end of an interrogative sentence (a question).
+F6,english,What is the opposite of 'generous'?,Kind,Giving,Stingy,Wealthy,C,Stingy means unwilling to spend money or give things to others which is the opposite of generous.
+F7,english,Which word contains a silent letter?,Hour,Cat,Stop,Jump,A,In the word 'hour' the letter 'h' is silent.
+F8,english,What is a group of related sentences that discuss one main idea called?,Paragraph,Phrase,Word,Clause,A,A paragraph is a group of related sentences that develop a central idea.
+F9,english,Which literary device involves comparing two unlike things using 'like' or 'as'?,Metaphor,Simile,Hyperbole,Personification,B,A simile compares two unlike things using 'like' or 'as' (e.g. "as brave as a lion").
+F10,english,Which of these is a complete sentence?,Running quickly.,Through the forest.,The dog barked.,To the store.,C,"The dog barked" is a complete sentence with a subject (dog) and verb (barked).
+G1,general,Which is the largest ocean on Earth?,Atlantic Ocean,Indian Ocean,Southern Ocean,Pacific Ocean,D,The Pacific Ocean is the largest and deepest ocean on Earth covering more than 30% of the Earth's surface.
+G2,general,What is the capital of Canada?,Toronto,Vancouver,Ottawa,Montreal,C,Ottawa is the capital city of Canada located in the province of Ontario.
+G3,general,How many continents are there on Earth?,5,6,7,8,C,There are seven continents: Africa Antarctica Asia Australia/Oceania Europe North America and South America.
+G4,general,Which of these animals is a mammal?,Shark,Eagle,Crocodile,Dolphin,D,Dolphins are mammals - they breathe air give birth to live young and produce milk for their offspring.
+G5,general,Which planet is closest to the Sun?,Earth,Venus,Mercury,Mars,C,Mercury is the closest planet to the Sun in our solar system.
+G6,general,Who painted the Mona Lisa?,Vincent van Gogh,Pablo Picasso,Michelangelo,Leonardo da Vinci,D,Leonardo da Vinci painted the Mona Lisa approximately between 1503 and 1519.
+G7,general,What is the main ingredient in guacamole?,Tomato,Avocado,Onion,Lime,B,The main ingredient in guacamole is avocado.
+G8,general,Which instrument has 88 keys?,Guitar,Violin,Piano,Flute,C,A standard piano has 88 keys (52 white keys and 36 black keys).
+G9,general,What is the largest mammal on Earth?,Elephant,Blue whale,Giraffe,Hippopotamus,B,The blue whale is the largest mammal on Earth and the largest animal known to have ever existed.
+G10,general,In which sport would you perform a slam dunk?,Soccer,Tennis,Basketball,Golf,C,A slam dunk is a type of scoring shot in basketball where a player jumps and forcefully puts the ball through the hoop.
