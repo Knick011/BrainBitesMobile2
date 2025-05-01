@@ -1,7 +1,6 @@
 // src/services/TimerService.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
-import SoundService from './SoundService';
 
 class TimerService {
   constructor() {
@@ -17,6 +16,7 @@ class TimerService {
     this.sessionStartTime = null;
     this.pausedTime = 0;
     this.pauseStartTime = null;
+    this.appStateSubscription = null;
     
     // Stats tracking
     this.stats = {
@@ -29,8 +29,8 @@ class TimerService {
     // Load saved data on initialization
     this.loadSavedTime();
     
-    // Listen for app state changes
-    AppState.addEventListener('change', this._handleAppStateChange);
+    // Listen for app state changes - using the new approach
+    this.appStateSubscription = AppState.addEventListener('change', this._handleAppStateChange);
   }
   
   // Handle app going to background/foreground
@@ -161,7 +161,6 @@ class TimerService {
   // Start the timer for an app
   startAppTimer(appId) {
     if (this.availableTime <= 0) {
-      SoundService.playTimeExpired();
       this._notifyListeners('timeExpired');
       return false;
     }
@@ -287,7 +286,6 @@ class TimerService {
     
     // Check if time expired
     if (remainingTime <= 0) {
-      SoundService.playTimeExpired();
       this.stopAppTimer();
       this._notifyListeners('timeExpired');
     }
@@ -376,8 +374,10 @@ class TimerService {
       clearInterval(this.timer);
     }
     
-    // Remove the AppState event listener
-    AppState.removeEventListener('change', this._handleAppStateChange);
+    // Remove the AppState event listener using new approach
+    if (this.appStateSubscription) {
+      this.appStateSubscription.remove();
+    }
     
     // If session is active, save the state before cleanup
     if (this.isAppRunning) {
