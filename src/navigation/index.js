@@ -5,11 +5,14 @@ import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import screens
+import SplashScreen from '../screens/SplashScreen';
 import HomeScreen from '../screens/HomeScreen';
 import QuizScreen from '../screens/QuizScreen';
 import AppSelectorScreen from '../screens/AppSelectorScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
+import QuizResultsScreen from '../screens/QuizResultsScreen';
+import StatsScreen from '../screens/StatsScreen';
 
 const Stack = createStackNavigator();
 
@@ -34,8 +37,7 @@ const AppNavigator = () => {
   }, []);
   
   if (isLoading) {
-    // You could show a splash screen here
-    return null;
+    return <SplashScreen />;
   }
   
   return (
@@ -44,14 +46,18 @@ const AppNavigator = () => {
         initialRouteName={isFirstLaunch ? "Welcome" : "Home"}
         screenOptions={{
           headerShown: false,
-          cardStyle: { backgroundColor: '#FFF8E7' }
+          cardStyle: { backgroundColor: '#FFF8E7' },
+          gestureEnabled: false,
+          animation: 'slide_from_right'
         }}
       >
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Quiz" component={QuizScreen} />
+        <Stack.Screen name="QuizResults" component={QuizResultsScreen} />
         <Stack.Screen name="AppSelector" component={AppSelectorScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Stats" component={StatsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

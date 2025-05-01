@@ -1,5 +1,5 @@
 // src/screens/AppSelectorScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -8,34 +8,94 @@ import {
   TouchableOpacity, 
   SafeAreaView,
   ActivityIndicator,
-  Alert 
+  Alert,
+  Animated,
+  Easing,
+  ImageBackground
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AppLauncher from '../services/AppLauncher';
 import TimerService from '../services/TimerService';
+import SoundService from '../services/SoundService';
+import MascotDisplay from '../components/mascot/MascotDisplay';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AppSelectorScreen = ({ navigation }) => {
+  // State
   const [apps, setApps] = useState([]);
   const [installedApps, setInstalledApps] = useState([]);
   const [availableTime, setAvailableTime] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activeSession, setActiveSession] = useState(null);
+  const [showMascot, setShowMascot] = useState(true);
+  const [mascotMessage, setMascotMessage] = useState(null);
+  const [sortedApps, setSortedApps] = useState([]);
   
+  // Animation values
+  const timeAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  
+  // Load apps on mount
   useEffect(() => {
-    // Load available apps and check which are installed
-    const loadApps = async () => {
-      setLoading(true);
-      
+    loadData();
+    
+    // Start animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 500,
+        easing: Easing.out(Easing.back(1.5)),
+        useNativeDriver: true
+      })
+    ]).start();
+    
+    // Add timer event listener
+    const removeListener = TimerService.addEventListener(handleTimerEvent);
+    
+    return () => {
+      removeListener();
+    };
+  }, []);
+  
+  // Animate time changes
+  useEffect(() => {
+    Animated.timing(timeAnim, {
+      toValue: availableTime,
+      duration: 800,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false
+    }).start();
+  }, [availableTime]);
+  
+  // Load all necessary data
+  const loadData = async () => {
+    setLoading(true);
+    
+    try {
       // Check if there's an active session
       const currentSession = TimerService.getCurrentSession();
       if (currentSession) {
         setActiveSession(currentSession);
+        setMascotMessage("You already have an active app session! Want to continue or start a new one?");
+      } else {
+        setMascotMessage("Choose an app to use your screen time. Remember to come back when you're done!");
       }
+      
+      // Get available time
+      const time = TimerService.getAvailableTime();
+      setAvailableTime(time);
+      timeAnim.setValue(time);
       
       // Get available apps
       const appList = AppLauncher.getAppList();
       
-      // Add some demo apps for testing
+      // Add demo apps for testing if needed
       const demoApps = [
         {
           id: 'demo_social',
@@ -64,6 +124,7 @@ const AppSelectorScreen = ({ navigation }) => {
       
       // Check which apps are installed
       const installedAppIds = [];
+      
       for (const app of appList) {
         const isInstalled = await AppLauncher.isAppInstalled(app.id);
         if (isInstalled) {
@@ -77,22 +138,40 @@ const AppSelectorScreen = ({ navigation }) => {
       }
       
       setInstalledApps(installedAppIds);
+      
+      // Sort apps by usage
+      sortAppsByUsage([...appList, ...demoApps], installedAppIds);
+      
+      // Load mascot setting
+      const mascotEnabled = await AsyncStorage.getItem('brainbites_show_mascot');
+      if (mascotEnabled !== null) {
+        setShowMascot(mascotEnabled === 'true');
+      }
+    } catch (error) {
+      console.error('Error loading app data:', error);
+    } finally {
       setLoading(false);
-    };
-    
-    // Get available time
-    setAvailableTime(TimerService.getAvailableTime());
-    
-    // Set up timer event listener
-    const removeListener = TimerService.addEventListener(handleTimerEvent);
-    
-    loadApps();
-    
-    return () => {
-      removeListener();
-    };
-  }, []);
+    }
+  };
   
+  // Sort apps by usage
+  const sortAppsByUsage = (appsList, installedIds) => {
+    // Get app usage stats
+    const appUsage = TimerService.getAppUsage();
+    
+    // Filter for installed apps and sort by usage (most used first)
+    const sorted = appsList
+      .filter(app => installedIds.includes(app.id))
+      .sort((a, b) => {
+        const usageA = appUsage[a.id] || 0;
+        const usageB = appUsage[b.id] || 0;
+        return usageB - usageA;
+      });
+    
+    setSortedApps(sorted);
+  };
+  
+  // Handle timer events
   const handleTimerEvent = (event) => {
     if (event.event === 'timeUpdate' || event.event === 'creditsAdded') {
       setAvailableTime(TimerService.getAvailableTime());
@@ -103,7 +182,10 @@ const AppSelectorScreen = ({ navigation }) => {
     }
   };
   
+  // Handle app selection
   const handleSelectApp = async (app) => {
+    SoundService.playButtonPress();
+    
     // For real apps, check if installed
     if (!app.isDemo && !installedApps.includes(app.id)) {
       Alert.alert(
@@ -116,11 +198,18 @@ const AppSelectorScreen = ({ navigation }) => {
     
     // Check if we have enough time
     if (availableTime <= 0) {
+      SoundService.playTimeExpired();
       Alert.alert(
         'No Time Available',
         'You need to earn more time by answering questions first.',
         [
-          { text: 'Go to Quiz', onPress: () => navigation.navigate('Quiz') },
+          { 
+            text: 'Go to Quiz', 
+            onPress: () => {
+              SoundService.playButtonPress();
+              navigation.navigate('Quiz');
+            }
+          },
           { text: 'Cancel', style: 'cancel' }
         ]
       );
@@ -137,6 +226,7 @@ const AppSelectorScreen = ({ navigation }) => {
           { 
             text: 'End Current & Start New', 
             onPress: () => {
+              SoundService.playButtonPress();
               TimerService.stopAppTimer();
               startAppSession(app);
             } 
@@ -149,13 +239,14 @@ const AppSelectorScreen = ({ navigation }) => {
     startAppSession(app);
   };
   
-  // Continuing src/screens/AppSelectorScreen.js
-
+  // Start a session for the selected app
   const startAppSession = (app) => {
     // Start app timer
     const success = TimerService.startAppTimer(app.id);
     
     if (success) {
+      SoundService.playTransition();
+      
       if (!app.isDemo) {
         // Launch real app
         AppLauncher.launchApp(app.id);
@@ -178,8 +269,11 @@ const AppSelectorScreen = ({ navigation }) => {
     }
   };
   
+  // Continue an existing session
   const handleContinueSession = () => {
     if (!activeSession) return;
+    
+    SoundService.playButtonPress();
     
     // Find the app object
     const app = apps.find(a => a.id === activeSession.appId);
@@ -198,44 +292,71 @@ const AppSelectorScreen = ({ navigation }) => {
     }
   };
   
-  const renderAppItem = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.appItem,
-        (!item.isDemo && !installedApps.includes(item.id)) && styles.appNotInstalled,
-        activeSession && activeSession.appId === item.id && styles.activeSessionApp
-      ]}
-      onPress={() => handleSelectApp(item)}
-      disabled={!item.isDemo && !installedApps.includes(item.id)}
-    >
-      <View style={[styles.appIcon, { backgroundColor: item.color || '#FF9F1C' }]}>
-        <Icon name={item.icon} size={32} color="white" />
-      </View>
-      <Text style={styles.appName}>{item.name}</Text>
-      
-      {/* Active session indicator */}
-      {activeSession && activeSession.appId === item.id && (
-        <View style={styles.activeBadge}>
-          <Text style={styles.activeBadgeText}>Active</Text>
+  // Render app item
+  const renderAppItem = ({ item }) => {
+    const isNotInstalled = !item.isDemo && !installedApps.includes(item.id);
+    const isActive = activeSession && activeSession.appId === item.id;
+    
+    // Get app usage in minutes (for display)
+    const appUsage = TimerService.getAppUsage();
+    const usageMinutes = Math.floor((appUsage[item.id] || 0) / 60);
+    
+    return (
+      <TouchableOpacity
+        style={[
+          styles.appItem,
+          isNotInstalled && styles.appNotInstalled,
+          isActive && styles.activeSessionApp
+        ]}
+        onPress={() => handleSelectApp(item)}
+        disabled={isNotInstalled}
+      >
+        <View style={[styles.appIcon, { backgroundColor: item.color || '#FF9F1C' }]}>
+          <Icon name={item.icon} size={30} color="white" />
         </View>
-      )}
-      
-      {/* Not installed badge */}
-      {!item.isDemo && !installedApps.includes(item.id) && (
-        <View style={styles.notInstalledBadge}>
-          <Text style={styles.notInstalledText}>Not Installed</Text>
+        
+        <View style={styles.appInfo}>
+          <Text style={styles.appName}>{item.name}</Text>
+          {usageMinutes > 0 && (
+            <Text style={styles.appUsage}>Used: {usageMinutes} min</Text>
+          )}
         </View>
-      )}
-    </TouchableOpacity>
-  );
+        
+        {/* Active session indicator */}
+        {isActive && (
+          <View style={styles.activeBadge}>
+            <Text style={styles.activeBadgeText}>Active</Text>
+          </View>
+        )}
+        
+        {/* Not installed badge */}
+        {isNotInstalled && (
+          <View style={styles.notInstalledBadge}>
+            <Text style={styles.notInstalledText}>Not Installed</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
   
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <Animated.View 
+        style={[
+          styles.container, 
+          { 
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }]
+          }
+        ]}
+      >
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              SoundService.playButtonPress();
+              navigation.goBack();
+            }}
           >
             <Icon name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
@@ -245,9 +366,12 @@ const AppSelectorScreen = ({ navigation }) => {
         <View style={styles.timeInfoBar}>
           <View style={styles.timeDisplay}>
             <Icon name="clock-outline" size={24} color="#FF9F1C" />
-            <Text style={styles.timeText}>
-              {TimerService.formatTime(availableTime)}
-            </Text>
+            <Animated.Text style={styles.timeText}>
+              {timeAnim.interpolate({
+                inputRange: [0, availableTime],
+                outputRange: [0, availableTime]
+              }).interpolate(value => TimerService.formatTime(Math.round(value)))}
+            </Animated.Text>
           </View>
           
           {activeSession && (
@@ -270,14 +394,23 @@ const AppSelectorScreen = ({ navigation }) => {
           <>
             <Text style={styles.sectionTitle}>Available Apps</Text>
             
-            <FlatList
-              data={apps}
-              keyExtractor={(item) => item.id}
-              renderItem={renderAppItem}
-              numColumns={2}
-              contentContainerStyle={styles.appGrid}
-              showsVerticalScrollIndicator={false}
-            />
+            {sortedApps.length > 0 ? (
+              <FlatList
+                data={sortedApps}
+                keyExtractor={(item) => item.id}
+                renderItem={renderAppItem}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.appList}
+              />
+            ) : (
+              <View style={styles.noAppsContainer}>
+                <Icon name="application-outline" size={64} color="#ccc" />
+                <Text style={styles.noAppsText}>No apps available</Text>
+                <Text style={styles.noAppsSubtext}>
+                  We couldn't find any installed apps that are compatible with Brain Bites.
+                </Text>
+              </View>
+            )}
             
             {availableTime <= 0 && (
               <View style={styles.noTimeContainer}>
@@ -286,7 +419,10 @@ const AppSelectorScreen = ({ navigation }) => {
                 </Text>
                 <TouchableOpacity 
                   style={styles.earnMoreButton}
-                  onPress={() => navigation.navigate('Quiz')}
+                  onPress={() => {
+                    SoundService.playButtonPress();
+                    navigation.navigate('Quiz');
+                  }}
                 >
                   <Text style={styles.earnMoreButtonText}>Earn More Time</Text>
                 </TouchableOpacity>
@@ -294,7 +430,19 @@ const AppSelectorScreen = ({ navigation }) => {
             )}
           </>
         )}
-      </View>
+      </Animated.View>
+      
+      {/* Mascot display */}
+      {showMascot && (
+        <MascotDisplay
+          type="happy"
+          position="right"
+          showMascot={showMascot}
+          message={mascotMessage}
+          autoHide={true}
+          autoHideDuration={8000}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -316,6 +464,13 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginRight: 8,
+    borderRadius: 20,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   title: {
     fontSize: 22,
@@ -327,13 +482,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 2,
   },
   timeDisplay: {
@@ -350,8 +505,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF9F1C',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 20,
   },
   continueButtonText: {
@@ -376,23 +531,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  appGrid: {
+  appList: {
     paddingBottom: 20,
   },
   appItem: {
-    flex: 1,
-    margin: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 16,
-    alignItems: 'center',
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
     position: 'relative',
-    minHeight: 140,
   },
   appNotInstalled: {
     opacity: 0.6,
@@ -402,18 +556,25 @@ const styles = StyleSheet.create({
     borderColor: '#4CAF50',
   },
   appIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FF9F1C',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginRight: 16,
+  },
+  appInfo: {
+    flex: 1,
   },
   appName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
-    textAlign: 'center',
+    color: '#333',
+    marginBottom: 4,
+  },
+  appUsage: {
+    fontSize: 12,
+    color: '#666',
   },
   notInstalledBadge: {
     position: 'absolute',
@@ -445,12 +606,32 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
+  noAppsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noAppsText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  noAppsSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    maxWidth: '80%',
+  },
   noTimeContainer: {
     backgroundColor: '#FFF3CD',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     marginTop: 16,
+    marginBottom: 16,
   },
   noTimeText: {
     color: '#856404',

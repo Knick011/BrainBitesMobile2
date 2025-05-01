@@ -1,4 +1,4 @@
-// src/services/QuizService.js - modified to use CSV from src/assets/data
+// src/services/QuizService.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
 import Papa from 'papaparse';
@@ -9,7 +9,16 @@ class QuizService {
     this.questions = [];
     this.usedQuestionIds = new Set();
     this.categoryCounts = {};
+    this.stats = {
+      totalAnswered: 0,
+      totalCorrect: 0,
+      streakRecord: 0,
+      categoryStats: {}
+    };
     this.STORAGE_KEY = 'brainbites_quiz_data';
+    this.STATS_KEY = 'brainbites_quiz_stats';
+    
+    // Load saved data on initialization
     this.loadSavedData();
     this.loadQuestions();
   }
@@ -17,11 +26,19 @@ class QuizService {
   // Load previously saved quiz data from storage
   async loadSavedData() {
     try {
+      // Load used question IDs
       const data = await AsyncStorage.getItem(this.STORAGE_KEY);
       if (data) {
         const parsedData = JSON.parse(data);
         this.usedQuestionIds = new Set(parsedData.usedQuestionIds || []);
       }
+      
+      // Load stats
+      const statsData = await AsyncStorage.getItem(this.STATS_KEY);
+      if (statsData) {
+        this.stats = JSON.parse(statsData);
+      }
+      
     } catch (error) {
       console.error('Error loading saved quiz data:', error);
     }
@@ -38,6 +55,45 @@ class QuizService {
     } catch (error) {
       console.error('Error saving quiz data:', error);
     }
+  }
+  
+  // Save stats to storage
+  async saveStats() {
+    try {
+      await AsyncStorage.setItem(this.STATS_KEY, JSON.stringify(this.stats));
+    } catch (error) {
+      console.error('Error saving quiz stats:', error);
+    }
+  }
+  
+  // Update stats when a question is answered
+  async updateStats(category, isCorrect, streak) {
+    // Update overall stats
+    this.stats.totalAnswered++;
+    if (isCorrect) {
+      this.stats.totalCorrect++;
+    }
+    
+    // Update streak record
+    if (streak > this.stats.streakRecord) {
+      this.stats.streakRecord = streak;
+    }
+    
+    // Update category stats
+    if (!this.stats.categoryStats[category]) {
+      this.stats.categoryStats[category] = {
+        answered: 0,
+        correct: 0
+      };
+    }
+    
+    this.stats.categoryStats[category].answered++;
+    if (isCorrect) {
+      this.stats.categoryStats[category].correct++;
+    }
+    
+    // Save updated stats
+    await this.saveStats();
   }
   
   // Load questions from CSV file
@@ -61,11 +117,14 @@ class QuizService {
           const existsInBundle = await RNFS.exists(sourcePath);
           
           if (!existsInBundle) {
-            console.error('CSV file not found in iOS bundle. Make sure to add it to the Xcode project.');
-            // Use embedded fallback questions
+            console.error('CSV file not found in iOS bundle. Using fallback questions.');
             this.setupFallbackQuestions();
             return;
           }
+          
+          // Copy from bundle to document directory
+          await RNFS.copyFile(sourcePath, destinationPath);
+          console.log('CSV file copied from iOS bundle to document directory');
         } else {
           // For Android, we can copy from assets folder
           try {
@@ -73,16 +132,9 @@ class QuizService {
             console.log('CSV file copied from Android assets to document directory');
           } catch (e) {
             console.error('Failed to copy from assets:', e);
-            // Use embedded fallback questions
             this.setupFallbackQuestions();
             return;
           }
-        }
-        
-        // For iOS, we need to copy from bundle to document directory
-        if (Platform.OS === 'ios') {
-          await RNFS.copyFile(sourcePath, destinationPath);
-          console.log('CSV file copied from iOS bundle to document directory');
         }
       }
       
@@ -93,9 +145,16 @@ class QuizService {
       Papa.parse(csvData, {
         header: true,
         complete: (results) => {
-          this.questions = results.data.filter(item => item.id && item.question); // Filter out any empty rows
+          // Filter out any rows with missing data
+          this.questions = results.data.filter(item => 
+            item.id && 
+            item.question && 
+            item.optionA && 
+            item.optionB && 
+            item.correctAnswer
+          );
           
-          // Count questions per category for tracking purposes
+          // Count questions per category
           this.categoryCounts = {};
           this.questions.forEach(q => {
             if (q.category) {
@@ -124,10 +183,10 @@ class QuizService {
   setupFallbackQuestions() {
     console.log('Using fallback questions');
     
-    // Create a minimal set of fallback questions
+    // Create a minimal set of fallback questions for each expected category
     this.questions = [
       {
-        id: 'A1',
+        id: 'F1',
         category: 'funfacts',
         question: 'Which planet is known as the Red Planet?',
         optionA: 'Venus',
@@ -138,7 +197,7 @@ class QuizService {
         explanation: 'Mars is called the Red Planet because of the reddish iron oxide on its surface.'
       },
       {
-        id: 'B1',
+        id: 'P1',
         category: 'psychology',
         question: 'What is the fear of spiders called?',
         optionA: 'Arachnophobia',
@@ -148,13 +207,48 @@ class QuizService {
         correctAnswer: 'A',
         explanation: 'Arachnophobia is the intense fear of spiders and other arachnids.'
       },
-      // Add a few more fallbacks for each category
+      {
+        id: 'M1',
+        category: 'math',
+        question: 'What is the square root of 144?',
+        optionA: '10',
+        optionB: '11',
+        optionC: '12',
+        optionD: '14',
+        correctAnswer: 'C',
+        explanation: 'The square root of 144 is 12, because 12 × 12 = 144.'
+      },
+      {
+        id: 'S1',
+        category: 'science',
+        question: 'What is the chemical symbol for gold?',
+        optionA: 'Au',
+        optionB: 'Ag',
+        optionC: 'Fe',
+        optionD: 'Go',
+        correctAnswer: 'A',
+        explanation: 'The chemical symbol for gold is Au, from the Latin word "aurum".'
+      },
+      {
+        id: 'G1',
+        category: 'general',
+        question: 'Which is the largest ocean on Earth?',
+        optionA: 'Atlantic Ocean',
+        optionB: 'Indian Ocean',
+        optionC: 'Southern Ocean',
+        optionD: 'Pacific Ocean',
+        correctAnswer: 'D',
+        explanation: 'The Pacific Ocean is the largest and deepest ocean on Earth.'
+      }
     ];
     
-    // Set up category counts for fallbacks
+    // Setup category counts for fallbacks
     this.categoryCounts = {
       'funfacts': 1,
-      'psychology': 1
+      'psychology': 1,
+      'math': 1,
+      'science': 1,
+      'general': 1
     };
   }
   
@@ -162,7 +256,7 @@ class QuizService {
   async getRandomQuestion(category = 'funfacts') {
     try {
       // Filter questions by category
-      const categoryQuestions = this.questions.filter(q => q.category === category);
+      const categoryQuestions = this.questions.filter(q => q.category.toLowerCase() === category.toLowerCase());
       
       if (categoryQuestions.length === 0) {
         throw new Error(`No questions found for category: ${category}`);
@@ -174,12 +268,8 @@ class QuizService {
       // If we've used too many questions (more than 80% of the category), reset tracking for this category
       if (availableQuestions.length < 0.2 * this.categoryCounts[category]) {
         // Clear only the used questions for this specific category
-        const categoryPrefix = category[0].toUpperCase();
-        this.usedQuestionIds.forEach(id => {
-          if (id.startsWith(categoryPrefix)) {
-            this.usedQuestionIds.delete(id);
-          }
-        });
+        const categoryIds = categoryQuestions.map(q => q.id);
+        categoryIds.forEach(id => this.usedQuestionIds.delete(id));
         
         await this.saveData();
         console.log(`Reset tracking for category ${category}`);
@@ -214,7 +304,8 @@ class QuizService {
           D: question.optionD
         },
         correctAnswer: question.correctAnswer,
-        explanation: question.explanation
+        explanation: question.explanation || 'No explanation available.',
+        category: question.category
       };
     } catch (error) {
       console.error('Error getting random question:', error);
@@ -235,7 +326,8 @@ class QuizService {
           D: "Mars"
         },
         correctAnswer: "C",
-        explanation: "Mercury is the closest planet to the Sun in our solar system."
+        explanation: "Mercury is the closest planet to the Sun in our solar system.",
+        category: "funfacts"
       },
       'psychology': {
         id: 'fallback-psychology',
@@ -247,7 +339,34 @@ class QuizService {
           D: "Psychiatry"
         },
         correctAnswer: "A",
-        explanation: "Oneirology is the scientific study of dreams."
+        explanation: "Oneirology is the scientific study of dreams.",
+        category: "psychology"
+      },
+      'math': {
+        id: 'fallback-math',
+        question: "What is the result of 7² - 3²?",
+        options: {
+          A: "40",
+          B: "30",
+          C: "49",
+          D: "4"
+        },
+        correctAnswer: "A",
+        explanation: "7² - 3² = 49 - 9 = 40",
+        category: "math"
+      },
+      'science': {
+        id: 'fallback-science',
+        question: "Which particle has a positive charge?",
+        options: {
+          A: "Proton",
+          B: "Neutron",
+          C: "Electron",
+          D: "Photon"
+        },
+        correctAnswer: "A",
+        explanation: "Protons have a positive charge, electrons have a negative charge, and neutrons have no charge.",
+        category: "science"
       },
       'default': {
         id: 'fallback-default',
@@ -259,7 +378,8 @@ class QuizService {
           D: "6"
         },
         correctAnswer: "B",
-        explanation: "2 + 2 = 4. This is a basic addition fact."
+        explanation: "2 + 2 = 4. This is a basic addition fact.",
+        category: "general"
       }
     };
     
@@ -267,15 +387,40 @@ class QuizService {
   }
   
   // Get available categories
-  async getCategories() {
+  getCategories() {
     try {
       // Get unique categories from questions
       const categories = [...new Set(this.questions.map(q => q.category))];
-      return categories.length > 0 ? categories : ['funfacts', 'psychology', 'math', 'science', 'history', 'english', 'general'];
+      return categories.length > 0 ? categories : ['funfacts', 'psychology', 'math', 'science', 'general'];
     } catch (error) {
       console.error('Error fetching categories:', error);
-      return ['funfacts', 'psychology', 'math', 'science', 'history', 'english', 'general'];
+      return ['funfacts', 'psychology', 'math', 'science', 'general'];
     }
+  }
+  
+  // Get stats for a specific category
+  getCategoryStats(category) {
+    if (!this.stats.categoryStats[category]) {
+      return { answered: 0, correct: 0, accuracy: 0 };
+    }
+    
+    const { answered, correct } = this.stats.categoryStats[category];
+    const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+    
+    return { answered, correct, accuracy };
+  }
+  
+  // Get overall quiz stats
+  getOverallStats() {
+    const { totalAnswered, totalCorrect, streakRecord } = this.stats;
+    const accuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
+    
+    return {
+      totalAnswered,
+      totalCorrect,
+      accuracy,
+      streakRecord
+    };
   }
   
   // Clear used questions tracking
@@ -283,6 +428,19 @@ class QuizService {
     this.usedQuestionIds.clear();
     await this.saveData();
     console.log('Reset all used questions tracking');
+  }
+  
+  // Reset stats
+  async resetStats() {
+    this.stats = {
+      totalAnswered: 0,
+      totalCorrect: 0,
+      streakRecord: 0,
+      categoryStats: {}
+    };
+    
+    await this.saveStats();
+    console.log('Reset all quiz stats');
   }
 }
 

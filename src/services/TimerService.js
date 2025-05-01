@@ -1,6 +1,7 @@
 // src/services/TimerService.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
+import SoundService from './SoundService';
 
 class TimerService {
   constructor() {
@@ -11,10 +12,19 @@ class TimerService {
     this.startTime = null;
     this.listeners = [];
     this.STORAGE_KEY = 'brainbites_timer_data';
+    this.STATS_KEY = 'brainbites_timer_stats';
     this.appState = 'active';
     this.sessionStartTime = null;
     this.pausedTime = 0;
     this.pauseStartTime = null;
+    
+    // Stats tracking
+    this.stats = {
+      totalTimeEarned: 0,
+      totalTimeUsed: 0,
+      sessionHistory: [],
+      appUsage: {}
+    };
     
     // Load saved data on initialization
     this.loadSavedTime();
@@ -25,6 +35,8 @@ class TimerService {
   
   // Handle app going to background/foreground
   _handleAppStateChange = (nextAppState) => {
+    console.log(`App State Changed: ${this.appState} -> ${nextAppState}`);
+    
     // If session is running and app goes to background
     if (this.appState === 'active' && nextAppState.match(/inactive|background/)) {
       this._pauseSession();
@@ -40,6 +52,7 @@ class TimerService {
   // Load previously saved time from storage
   async loadSavedTime() {
     try {
+      // Load timer data
       const data = await AsyncStorage.getItem(this.STORAGE_KEY);
       if (data) {
         const parsedData = JSON.parse(data);
@@ -57,7 +70,15 @@ class TimerService {
           }
         }
       }
+      
+      // Load stats data
+      const statsData = await AsyncStorage.getItem(this.STATS_KEY);
+      if (statsData) {
+        this.stats = JSON.parse(statsData);
+      }
+      
       this._notifyListeners('timeLoaded', { availableTime: this.availableTime });
+      console.log('Timer data loaded successfully');
     } catch (error) {
       console.error('Error loading saved time:', error);
     }
@@ -79,10 +100,30 @@ class TimerService {
     }
   }
   
+  // Save stats to storage
+  async saveStats() {
+    try {
+      await AsyncStorage.setItem(this.STATS_KEY, JSON.stringify(this.stats));
+    } catch (error) {
+      console.error('Error saving timer stats:', error);
+    }
+  }
+  
+  // Get time stats for display
+  getTimeStats() {
+    const { totalTimeEarned, totalTimeUsed } = this.stats;
+    return {
+      totalTimeEarned,
+      totalTimeUsed,
+      currentBalance: this.availableTime
+    };
+  }
+  
   // Pause the session when app goes to background
   _pauseSession() {
     if (!this.isAppRunning) return;
     
+    console.log('Pausing app session');
     this.pauseStartTime = Date.now();
     
     // Clear the timer but don't end session
@@ -101,6 +142,8 @@ class TimerService {
   _resumeSession() {
     if (!this.isAppRunning || !this.pauseStartTime) return;
     
+    console.log('Resuming app session');
+    
     // Calculate paused duration and add to total paused time
     if (this.pauseStartTime) {
       this.pausedTime += Math.floor((Date.now() - this.pauseStartTime) / 1000);
@@ -118,10 +161,12 @@ class TimerService {
   // Start the timer for an app
   startAppTimer(appId) {
     if (this.availableTime <= 0) {
+      SoundService.playTimeExpired();
       this._notifyListeners('timeExpired');
       return false;
     }
     
+    console.log(`Starting timer for app: ${appId}`);
     this.activeApp = appId;
     this.isAppRunning = true;
     this.sessionStartTime = Date.now();
@@ -149,6 +194,10 @@ class TimerService {
   
   // Stop the timer
   stopAppTimer() {
+    if (!this.isAppRunning) return 0;
+    
+    console.log('Stopping app timer');
+    
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -159,6 +208,31 @@ class TimerService {
     if (this.sessionStartTime) {
       timeSpent = Math.floor((Date.now() - this.sessionStartTime) / 1000) - this.pausedTime;
       this.availableTime = Math.max(0, this.availableTime - timeSpent);
+      
+      // Update stats
+      this.stats.totalTimeUsed += timeSpent;
+      
+      // Update app usage stats
+      if (!this.stats.appUsage[this.activeApp]) {
+        this.stats.appUsage[this.activeApp] = 0;
+      }
+      this.stats.appUsage[this.activeApp] += timeSpent;
+      
+      // Add to session history
+      this.stats.sessionHistory.push({
+        appId: this.activeApp,
+        startTime: new Date(this.sessionStartTime).toISOString(),
+        endTime: new Date().toISOString(),
+        duration: timeSpent
+      });
+      
+      // Keep only last 50 sessions to prevent data growth
+      if (this.stats.sessionHistory.length > 50) {
+        this.stats.sessionHistory = this.stats.sessionHistory.slice(-50);
+      }
+      
+      // Save updated stats
+      this.saveStats();
     }
     
     this.isAppRunning = false;
@@ -213,6 +287,7 @@ class TimerService {
     
     // Check if time expired
     if (remainingTime <= 0) {
+      SoundService.playTimeExpired();
       this.stopAppTimer();
       this._notifyListeners('timeExpired');
     }
@@ -225,7 +300,13 @@ class TimerService {
   
   // Add time credits (rewards for correct answers)
   addTimeCredits(seconds) {
+    console.log(`Adding ${seconds} seconds of time credits`);
     this.availableTime += seconds;
+    
+    // Update stats
+    this.stats.totalTimeEarned += seconds;
+    this.saveStats();
+    
     this.saveTimeData();
     this._notifyListeners('creditsAdded', { seconds, newTotal: this.availableTime });
     return this.availableTime;
@@ -256,6 +337,24 @@ class TimerService {
     }
   }
   
+  // Get app usage data for stats
+  getAppUsage() {
+    return this.stats.appUsage;
+  }
+  
+  // Reset statistics
+  async resetStats() {
+    this.stats = {
+      totalTimeEarned: 0,
+      totalTimeUsed: 0,
+      sessionHistory: [],
+      appUsage: {}
+    };
+    
+    await this.saveStats();
+    console.log('Timer stats reset');
+  }
+  
   // Add event listener
   addEventListener(callback) {
     this.listeners.push(callback);
@@ -278,14 +377,14 @@ class TimerService {
     }
     
     // Remove the AppState event listener
-    // Note: The exact method depends on React Native version
-    // For newer versions, this is the preferred method
     AppState.removeEventListener('change', this._handleAppStateChange);
     
     // If session is active, save the state before cleanup
     if (this.isAppRunning) {
       this.stopAppTimer();
     }
+    
+    console.log('Timer service cleaned up');
   }
 }
 
