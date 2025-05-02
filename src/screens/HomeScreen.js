@@ -7,7 +7,6 @@ import {
   TouchableOpacity, 
   SafeAreaView, 
   ScrollView,
-  Image,
   Animated,
   Easing,
   Dimensions
@@ -16,7 +15,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import TimerService from '../services/TimerService';
 import QuizService from '../services/QuizService';
 import MascotDisplay from '../components/mascot/MascotDisplay';
-import SoundService from '../services/SoundService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
@@ -64,14 +62,14 @@ const HomeScreen = ({ navigation }) => {
     updateMascotMessage();
     
     return () => {
-      removeListener();
+      if (removeListener) removeListener();
     };
   }, []);
   
   // Animate time changes
   useEffect(() => {
     Animated.timing(timeAnim, {
-      toValue: availableTime,
+      toValue: availableTime || 0,
       duration: 1000,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false
@@ -83,16 +81,32 @@ const HomeScreen = ({ navigation }) => {
     try {
       // Load time
       const time = TimerService.getAvailableTime();
-      setAvailableTime(time);
-      timeAnim.setValue(time);
+      setAvailableTime(time || 0);
+      timeAnim.setValue(time || 0);
       
-      // Load categories
-      const cats = QuizService.getCategories();
-      setCategories(cats);
+      // Load categories - handle potential undefined
+      try {
+        const cats = QuizService.getCategories ? 
+          await QuizService.getCategories() : 
+          ['funfacts', 'psychology', 'math', 'science', 'general'];
+        
+        setCategories(Array.isArray(cats) ? cats : []);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        setCategories(['funfacts', 'psychology', 'math', 'science', 'general']);
+      }
       
-      // Load stats
-      const overallStats = QuizService.getOverallStats();
-      setStats(overallStats);
+      // Load stats - handle potential undefined
+      try {
+        const overallStats = QuizService.getOverallStats ? 
+          QuizService.getOverallStats() : 
+          { totalAnswered: 0, totalCorrect: 0, streakRecord: 0 };
+        
+        setStats(overallStats || { totalAnswered: 0, totalCorrect: 0, streakRecord: 0 });
+      } catch (error) {
+        console.error('Error loading stats:', error);
+        setStats({ totalAnswered: 0, totalCorrect: 0, streakRecord: 0 });
+      }
       
       // Load settings
       const mascotEnabled = await AsyncStorage.getItem('brainbites_show_mascot');
@@ -106,15 +120,17 @@ const HomeScreen = ({ navigation }) => {
   
   // Handle timer events
   const handleTimerEvent = (event) => {
+    if (!event) return;
+    
     if (event.event === 'timeUpdate' || event.event === 'creditsAdded') {
-      setAvailableTime(TimerService.getAvailableTime());
+      setAvailableTime(TimerService.getAvailableTime() || 0);
       updateMascotMessage();
     }
   };
   
   // Update mascot message based on available time
   const updateMascotMessage = () => {
-    const time = TimerService.getAvailableTime();
+    const time = TimerService.getAvailableTime() || 0;
     
     if (time <= 0) {
       setMascotMessage("You're out of screen time! Answer some questions to earn more time. 📱");
@@ -127,15 +143,13 @@ const HomeScreen = ({ navigation }) => {
     }
   };
   
-  // Navigation handlers
+  // Navigation handlers - with null checks to avoid crashes
   const handleStartQuiz = (category) => {
-    SoundService.playButtonPress();
+    if (!category) category = 'funfacts';
     navigation.navigate('Quiz', { category, quizLength: 5 });
   };
   
   const handleUseTime = () => {
-    SoundService.playButtonPress();
-    
     if (availableTime <= 0) {
       // Show message about needing to earn time
       setMascotMessage("You don't have any screen time yet! Answer questions correctly to earn time. 📱");
@@ -146,17 +160,17 @@ const HomeScreen = ({ navigation }) => {
   };
   
   const handleOpenSettings = () => {
-    SoundService.playButtonPress();
     navigation.navigate('Settings');
   };
   
   const handleOpenStats = () => {
-    SoundService.playButtonPress();
     navigation.navigate('Stats');
   };
   
-  // Helper functions for UI
+  // Helper functions for UI - with null checks
   const getCategoryIcon = (category) => {
+    if (!category) return 'help-circle-outline';
+    
     // Map categories to icons
     const iconMap = {
       'funfacts': 'lightbulb-on-outline',
@@ -172,6 +186,8 @@ const HomeScreen = ({ navigation }) => {
   };
   
   const getCategoryColor = (category) => {
+    if (!category) return '#FF9F1C';
+    
     // Map categories to colors
     const colorMap = {
       'funfacts': '#FF9F1C',
@@ -187,6 +203,8 @@ const HomeScreen = ({ navigation }) => {
   };
   
   const getCategoryEmoji = (category) => {
+    if (!category) return '❓';
+    
     // Map categories to emojis
     const emojiMap = {
       'funfacts': '💡',
@@ -201,8 +219,11 @@ const HomeScreen = ({ navigation }) => {
     return emojiMap[category] || '❓';
   };
   
-  // Format time for display
+  // Format time for display - with null check
   const formatTimeWithHours = (seconds) => {
+    if (seconds === undefined || seconds === null) seconds = 0;
+    if (seconds < 0) seconds = 0;
+    
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
@@ -220,6 +241,24 @@ const HomeScreen = ({ navigation }) => {
     parts.push(`${remainingSeconds}s`);
     
     return parts.join(' ');
+  };
+  
+  // Create a safe interpolation function to avoid "cannot read property length of undefined"
+  const safeInterpolate = (value, inputRange, outputRange) => {
+    // Ensure value is a valid Animated.Value
+    if (!value || typeof value.interpolate !== 'function') {
+      return '0:00';
+    }
+    
+    try {
+      return value.interpolate({
+        inputRange: inputRange || [0, 1],
+        outputRange: outputRange || [0, 1]
+      });
+    } catch (error) {
+      console.error('Error in interpolation:', error);
+      return 0; // Return a safe default value
+    }
   };
   
   return (
@@ -263,12 +302,9 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.timeCardTitle}>Available Screen Time</Text>
             </View>
             
-            <Animated.Text style={styles.timeCardValue}>
-              {timeAnim.interpolate({
-                inputRange: [0, availableTime],
-                outputRange: [0, availableTime]
-              }).interpolate(value => formatTimeWithHours(Math.round(value)))}
-            </Animated.Text>
+            <Text style={styles.timeCardValue}>
+              {formatTimeWithHours(availableTime)}
+            </Text>
             
             <TouchableOpacity 
               style={[
@@ -287,19 +323,19 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.statsSummary}>
             <View style={styles.statItem}>
               <Icon name="help-circle-outline" size={20} color="#FF9F1C" />
-              <Text style={styles.statValue}>{stats.totalAnswered}</Text>
+              <Text style={styles.statValue}>{stats.totalAnswered || 0}</Text>
               <Text style={styles.statLabel}>Questions</Text>
             </View>
             
             <View style={styles.statItem}>
               <Icon name="check-circle-outline" size={20} color="#4CAF50" />
-              <Text style={styles.statValue}>{stats.totalCorrect}</Text>
+              <Text style={styles.statValue}>{stats.totalCorrect || 0}</Text>
               <Text style={styles.statLabel}>Correct</Text>
             </View>
             
             <View style={styles.statItem}>
               <Icon name="fire" size={20} color="#FF9F1C" />
-              <Text style={styles.statValue}>{stats.streakRecord}</Text>
+              <Text style={styles.statValue}>{stats.streakRecord || 0}</Text>
               <Text style={styles.statLabel}>Best Streak</Text>
             </View>
           </View>
@@ -308,33 +344,41 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Quiz Categories</Text>
           
           <View style={styles.categoriesContainer}>
-            {categories.map((category) => (
-              <TouchableOpacity 
-                key={category}
-                style={[
-                  styles.categoryCard,
-                  { borderColor: getCategoryColor(category) }
-                ]}
-                onPress={() => handleStartQuiz(category)}
-              >
-                <View 
+            {categories && categories.length > 0 ? (
+              categories.map((category) => (
+                <TouchableOpacity 
+                  key={category || 'unknown'}
                   style={[
-                    styles.categoryIcon,
-                    { backgroundColor: getCategoryColor(category) }
+                    styles.categoryCard,
+                    { borderColor: getCategoryColor(category) }
                   ]}
+                  onPress={() => handleStartQuiz(category)}
                 >
-                  <Icon name={getCategoryIcon(category)} size={28} color="white" />
-                </View>
-                
-                <Text style={styles.categoryName}>
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                  <View 
+                    style={[
+                      styles.categoryIcon,
+                      { backgroundColor: getCategoryColor(category) }
+                    ]}
+                  >
+                    <Icon name={getCategoryIcon(category)} size={28} color="white" />
+                  </View>
+                  
+                  <Text style={styles.categoryName}>
+                    {category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Category'}
+                  </Text>
+                  
+                  <Text style={styles.categoryEmoji}>
+                    {getCategoryEmoji(category)}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.noCategoriesContainer}>
+                <Text style={styles.noCategoriesText}>
+                  No categories available. Please restart the app.
                 </Text>
-                
-                <Text style={styles.categoryEmoji}>
-                  {getCategoryEmoji(category)}
-                </Text>
-              </TouchableOpacity>
-            ))}
+              </View>
+            )}
           </View>
           
           {/* Quick start button */}
@@ -416,6 +460,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+
   timeCardTitle: {
     fontSize: 16,
     fontWeight: '600',
